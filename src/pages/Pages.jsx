@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { products, getReviews } from '../mockData';
 import ProductCard from '../components/ProductCard';
