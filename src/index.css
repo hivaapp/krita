@@ -79,8 +79,15 @@ main {
   padding: 0 24px;
 }
 
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 32px;
+  }
+}
+
 .section {
-  padding: 64px 0;
+  padding-top: 64px;
+  padding-bottom: 64px;
 }
 
 /* Buttons */
@@ -588,7 +595,19 @@ main {
   z-index: 100;
 }
 .toast-success { border-left: 4px solid var(--color-success); }
+.toast-error { border-left: 4px solid var(--color-error); }
 .toast-info { border-left: 4px solid var(--color-accent); }
+
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Forms */
 .form-group {
@@ -622,6 +641,34 @@ main {
 @keyframes fadeInUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.whatsapp-float {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background-color: #25D366;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  transition: transform 0.3s ease;
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.1);
+  background-color: #20BA5A;
+}
+
+@media (max-width: 1023px) {
+  .whatsapp-float {
+    bottom: 90px; /* Above mobile nav */
+  }
 }
 
 @media (min-width: 640px) {

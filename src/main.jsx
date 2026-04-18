@@ -1,7 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { StoreProvider } from './context/StoreContext.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
+import { CartProvider } from './context/CartContext.jsx'
+import { WishlistProvider } from './context/WishlistContext.jsx'
 import './index.css'
 import App from './App.jsx'
 
@@ -13,10 +15,14 @@ document.head.appendChild(link);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <StoreProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StoreProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <App />
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </StrictMode>,
 )

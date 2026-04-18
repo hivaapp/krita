@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Heart, ShoppingCart, User, Menu, Home, Grid, X } from 'lucide-react';
-import { useStore } from '../context/StoreContext';
+import { Search, Heart, ShoppingCart, User, Menu, Home, Grid, X, LogOut, MessageCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 function BrandLogo() {
   return (
@@ -22,8 +24,27 @@ function BrandLogo() {
   );
 }
 
+function WhatsAppButton() {
+  const phoneNumber = "919963650681";
+  const whatsappUrl = `https://wa.me/${phoneNumber}`;
+
+  return (
+    <a 
+      href={whatsappUrl} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="whatsapp-float"
+      aria-label="Chat on WhatsApp"
+    >
+      <MessageCircle size={32} fill="currentColor" />
+    </a>
+  );
+}
+
 export default function Layout() {
-  const { state } = useStore();
+  const { isAuthenticated, user } = useAuth();
+  const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -56,7 +77,8 @@ export default function Layout() {
           <nav className="nav-links">
             <Link to="/">Home</Link>
             <Link to="/shop">Shop</Link>
-            <Link to="/shop?category=Collections">Collections</Link>
+            <Link to="/shop?category=women">Women</Link>
+            <Link to="/shop?category=men">Men</Link>
             <Link to="/shop?sale=true" style={{ color: 'var(--color-badge-sale)' }}>Sale</Link>
           </nav>
 
@@ -66,13 +88,13 @@ export default function Layout() {
             </button>
             <Link to="/wishlist" className="icon-btn">
               <Heart size={22} />
-              {state.wishlist.length > 0 && <span className="badge">{state.wishlist.length}</span>}
+              {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
             </Link>
             <Link to="/cart" className="icon-btn">
               <ShoppingCart size={22} />
-              {state.cart.length > 0 && <span className="badge">{state.cart.reduce((a,c) => a+c.qty, 0)}</span>}
+              {cartCount > 0 && <span className="badge">{cartCount}</span>}
             </Link>
-            <Link to="/auth" className="icon-btn" style={{ display: 'flex' }}>
+            <Link to={isAuthenticated ? "/profile" : "/auth"} className="icon-btn" style={{ display: 'flex' }}>
               <User size={22} />
             </Link>
           </div>
@@ -85,9 +107,20 @@ export default function Layout() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontSize: '18px', fontWeight: '500' }}>
             <Link to="/" onClick={() => setMenuOpen(false)}>Home</Link>
             <Link to="/shop" onClick={() => setMenuOpen(false)}>Shop</Link>
-            <Link to="/shop?category=Women" onClick={() => setMenuOpen(false)}>Women</Link>
-            <Link to="/shop?category=Men" onClick={() => setMenuOpen(false)}>Men</Link>
+            <Link to="/shop?category=women" onClick={() => setMenuOpen(false)}>Women</Link>
+            <Link to="/shop?category=men" onClick={() => setMenuOpen(false)}>Men</Link>
+            <Link to="/shop?category=accessories" onClick={() => setMenuOpen(false)}>Accessories</Link>
             <Link to="/shop?sale=true" onClick={() => setMenuOpen(false)} style={{ color: 'var(--color-badge-sale)' }}>Sale</Link>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '24px' }}>
+              {isAuthenticated ? (
+                <>
+                  <Link to="/profile" onClick={() => setMenuOpen(false)} style={{ display: 'block', marginBottom: '16px' }}>My Profile</Link>
+                  <Link to="/orders" onClick={() => setMenuOpen(false)} style={{ display: 'block' }}>My Orders</Link>
+                </>
+              ) : (
+                <Link to="/auth" onClick={() => setMenuOpen(false)}>Login / Register</Link>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -139,16 +172,16 @@ export default function Layout() {
             <div className="footer-col">
               <h4>Shop</h4>
               <ul>
-                <li><Link to="/shop?category=Women">Women's Collection</Link></li>
-                <li><Link to="/shop?category=Men">Men's Collection</Link></li>
-                <li><Link to="/shop?category=Accessories">Accessories</Link></li>
+                <li><Link to="/shop?category=women">Women's Collection</Link></li>
+                <li><Link to="/shop?category=men">Men's Collection</Link></li>
+                <li><Link to="/shop?category=accessories">Accessories</Link></li>
                 <li><Link to="/shop?sale=true">Clearance Sale</Link></li>
               </ul>
             </div>
             <div className="footer-col">
               <h4>Help & Support</h4>
               <ul>
-                <li><a href="#">Track Order</a></li>
+                <li><Link to="/orders">Track Order</Link></li>
                 <li><a href="#">Returns & Exchanges</a></li>
                 <li><a href="#">Shipping Info</a></li>
                 <li><a href="#">Contact Us</a></li>
@@ -188,18 +221,19 @@ export default function Layout() {
         <Link to="/wishlist" className={`bottom-nav-item ${location.pathname === '/wishlist' ? 'active' : ''}`}>
           <div style={{ position: 'relative' }}>
              <Heart size={20} />
-             {state.wishlist.length > 0 && <span className="badge" style={{ top: '-8px', right: '-8px' }}>{state.wishlist.length}</span>}
+             {wishlistCount > 0 && <span className="badge" style={{ top: '-8px', right: '-8px' }}>{wishlistCount}</span>}
           </div>
           <span>Wishlist</span>
         </Link>
         <Link to="/cart" className={`bottom-nav-item ${location.pathname === '/cart' ? 'active' : ''}`}>
           <div style={{ position: 'relative' }}>
              <ShoppingCart size={20} />
-             {state.cart.length > 0 && <span className="badge" style={{ top: '-8px', right: '-8px' }}>{state.cart.reduce((a,c)=>a+c.qty,0)}</span>}
+             {cartCount > 0 && <span className="badge" style={{ top: '-8px', right: '-8px' }}>{cartCount}</span>}
           </div>
           <span>Cart</span>
         </Link>
       </nav>
+      <WhatsAppButton />
     </div>
   );
 }
