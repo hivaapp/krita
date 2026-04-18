@@ -137,9 +137,9 @@ main {
   display: flex;
   align-items: center;
   transition: all 0.3s ease;
-  background-color: #FFC0CB; /* Baby Pink always on */
-  color: #000000; /* Dark text for contrast */
-  border-bottom: 1px solid #FFB6C1;
+  background-color: #eedfd8;
+  color: #000000;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .header.solid {
   box-shadow: 0 4px 20px rgba(0,0,0,0.5); /* Just add a shadow on scroll */
