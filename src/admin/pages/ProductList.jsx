@@ -46,8 +46,8 @@ export default function ProductList() {
 
   function stockBadge(stock) {
     if (stock === 0) return <span className="admin-badge admin-badge-danger">Out of Stock</span>;
-    if (stock <= 10) return <span className="admin-badge admin-badge-warning">{stock}</span>;
-    return <span className="admin-badge admin-badge-success">{stock}</span>;
+    if (stock <= 5) return <span className="admin-badge admin-badge-warning">{stock} Low Stock</span>;
+    return <span className="admin-badge admin-badge-success">{stock} units</span>;
   }
 
   async function handleDelete() {

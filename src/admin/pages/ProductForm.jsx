@@ -18,7 +18,7 @@ export default function ProductForm() {
     features: [], meta_title: '', meta_description: '', specifications: {},
   });
   const [images, setImages] = useState([]); // { url, isPrimary, file?, media_type? }
-  const [variants, setVariants] = useState([]);
+  const [variants, setVariants] = useState([{ size: '', color: '', color_hex: '', sku: '', stock_quantity: 0 }]);
   const [sizes, setSizes] = useState([]);
   const [colors, setColors] = useState([]);
   const [sizeInput, setSizeInput] = useState('');
@@ -53,10 +53,11 @@ export default function ProductForm() {
     setImages((data.product_images || []).sort((a, b) => a.display_order - b.display_order).map(img => ({
       url: img.image_url, isPrimary: img.is_primary, id: img.id, media_type: img.media_type || 'image',
     })));
-    setVariants((data.product_variants || []).map(v => ({
+    const vrs = data.product_variants || [];
+    setVariants(vrs.length > 0 ? vrs.map(v => ({
       size: v.size || '', color: v.color || '', color_hex: v.color_hex || '#000',
       sku: v.sku || '', stock_quantity: v.stock_quantity || 0, id: v.id,
-    })));
+    })) : [{ size: '', color: '', color_hex: '', sku: '', stock_quantity: 0 }]);
     // Extract unique sizes and colors from existing variants
     const existingSizes = [...new Set((data.product_variants || []).map(v => v.size).filter(Boolean))];
     const existingColors = [...new Set((data.product_variants || []).map(v => v.color).filter(Boolean))];
@@ -92,17 +93,19 @@ export default function ProductForm() {
     const newVariants = [];
     const szs = sizes.length ? sizes : [''];
     const cls = colors.length ? colors : [{ name: '', hex: '' }];
+    
     for (const sz of szs) {
       for (const cl of cls) {
         const existing = variants.find(v => v.size === sz && v.color === cl.name);
+        const skuSuffix = (sz || cl.name) ? `-${sz}-${cl.name}` : '';
         newVariants.push({
           size: sz, color: cl.name, color_hex: cl.hex,
-          sku: existing?.sku || `${form.slug || 'SKU'}-${sz}-${cl.name}`.toUpperCase().replace(/[^A-Z0-9-]/g, ''),
+          sku: existing?.sku || `${form.slug || 'SKU'}${skuSuffix}`.toUpperCase().replace(/[^A-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/(^-|-$)/g, ''),
           stock_quantity: existing?.stock_quantity || 0,
         });
       }
     }
-    setVariants(newVariants);
+    setVariants(newVariants.length > 0 ? newVariants : [{ size: '', color: '', color_hex: '', sku: '', stock_quantity: 0 }]);
   }
 
   async function handleImageUpload(e) {
@@ -249,10 +252,10 @@ export default function ProductForm() {
         </div>
       </div>
 
-      {/* Pricing */}
+      {/* Pricing & Stock */}
       <div className="admin-card admin-mb-16">
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Pricing</h3>
-        <div className="admin-grid admin-grid-3">
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Pricing & Stock Summary</h3>
+        <div className="admin-grid admin-grid-4">
           <div className="admin-form-group">
             <label className="admin-label">Selling Price (₹) *</label>
             <input className="admin-input" type="number" value={form.price} onChange={e => updateField('price', e.target.value)} />
@@ -264,6 +267,12 @@ export default function ProductForm() {
           <div className="admin-form-group">
             <label className="admin-label">Discount</label>
             <div className="admin-input" style={{ background: 'var(--admin-bg)', color: 'var(--admin-text-secondary)' }}>{discountPct}% off</div>
+          </div>
+          <div className="admin-form-group">
+            <label className="admin-label">Total Stock</label>
+            <div className={`admin-input ${variants.reduce((s, v) => s + (v.stock_quantity || 0), 0) === 0 ? 'admin-text-danger' : 'admin-text-success'}`} style={{ background: 'var(--admin-bg)', fontWeight: 600 }}>
+              {variants.reduce((s, v) => s + (v.stock_quantity || 0), 0)} units
+            </div>
           </div>
         </div>
       </div>
@@ -337,12 +346,16 @@ export default function ProductForm() {
         </div>
       </div>
 
-      {/* Variants */}
+      {/* Inventory & Variants */}
       <div className="admin-card admin-mb-16">
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Variants</h3>
+        <div className="admin-flex-between admin-mb-16">
+          <h3 style={{ fontSize: 14, fontWeight: 600 }}>Inventory & Variants</h3>
+          {variants.length > 1 && <span className="admin-badge admin-badge-info">{variants.length} Variants</span>}
+        </div>
+        
         <div className="admin-grid admin-grid-2" style={{ marginBottom: 12 }}>
           <div>
-            <label className="admin-label">Sizes</label>
+            <label className="admin-label">Sizes (Optional)</label>
             <div className="admin-flex admin-gap-8" style={{ marginBottom: 8 }}>
               <input className="admin-input" value={sizeInput} onChange={e => setSizeInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSize()} placeholder="e.g., S, M, L" />
               <button className="admin-btn admin-btn-secondary" onClick={addSize}><Plus size={14} /></button>
@@ -354,7 +367,7 @@ export default function ProductForm() {
             </div>
           </div>
           <div>
-            <label className="admin-label">Colors</label>
+            <label className="admin-label">Colors (Optional)</label>
             <div className="admin-flex admin-gap-8" style={{ marginBottom: 8 }}>
               <input className="admin-input" value={colorInput} onChange={e => setColorInput(e.target.value)} placeholder="e.g., Red" style={{ flex: 1 }} />
               <input type="color" value={colorHex} onChange={e => setColorHex(e.target.value)} style={{ width: 36, height: 36, border: 'none', cursor: 'pointer' }} />
@@ -369,26 +382,61 @@ export default function ProductForm() {
             </div>
           </div>
         </div>
-        <button className="admin-btn admin-btn-secondary admin-mb-16" onClick={generateVariants}><Plus size={14} /> Generate Variants</button>
+        <button className="admin-btn admin-btn-secondary admin-mb-16" onClick={generateVariants}>
+          <Plus size={14} /> Update Variants List
+        </button>
 
-        {variants.length > 0 && (
+        <div className="admin-table-wrap" style={{ border: '1px solid var(--admin-border)' }}>
           <table className="admin-table" style={{ fontSize: 12 }}>
             <thead>
-              <tr><th>Size</th><th>Color</th><th>SKU</th><th>Stock</th><th></th></tr>
+              <tr>
+                <th>{variants.length > 1 ? 'Size / Color' : 'Type'}</th>
+                <th>SKU</th>
+                <th>Stock Quantity</th>
+                <th style={{ width: 50 }}></th>
+              </tr>
             </thead>
             <tbody>
               {variants.map((v, i) => (
                 <tr key={i}>
-                  <td>{v.size || '—'}</td>
-                  <td><div className="admin-flex admin-gap-8">{v.color_hex && <span style={{ width: 14, height: 14, borderRadius: '50%', background: v.color_hex, border: '1px solid var(--admin-border)' }} />}{v.color || '—'}</div></td>
-                  <td><input className="admin-input admin-mono" value={v.sku} onChange={e => setVariants(prev => prev.map((vr, j) => j === i ? { ...vr, sku: e.target.value } : vr))} style={{ maxWidth: 160, fontSize: 11 }} /></td>
-                  <td><input className="admin-input" type="number" value={v.stock_quantity} onChange={e => setVariants(prev => prev.map((vr, j) => j === i ? { ...vr, stock_quantity: parseInt(e.target.value) || 0 } : vr))} style={{ maxWidth: 80 }} /></td>
-                  <td><button className="admin-btn-icon" onClick={() => setVariants(variants.filter((_, j) => j !== i))}><Trash2 size={14} /></button></td>
+                  <td style={{ minWidth: 150 }}>
+                    {(!v.size && !v.color) ? (
+                      <span style={{ color: 'var(--admin-text-muted)', fontStyle: 'italic' }}>Standard / No Variants</span>
+                    ) : (
+                      <div className="admin-flex admin-gap-8">
+                        {v.size && <span className="admin-badge admin-badge-gray">{v.size}</span>}
+                        {v.color && (
+                          <div className="admin-flex admin-gap-4">
+                            <span style={{ width: 12, height: 12, borderRadius: '50%', background: v.color_hex, border: '1px solid var(--admin-border)' }} />
+                            <span>{v.color}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <input className="admin-input admin-mono" value={v.sku} onChange={e => setVariants(prev => prev.map((vr, j) => j === i ? { ...vr, sku: e.target.value } : vr))} style={{ fontSize: 11, height: 32 }} placeholder="Auto-generated" />
+                  </td>
+                  <td>
+                    <div className="admin-flex admin-gap-8">
+                      <input className="admin-input" type="number" value={v.stock_quantity} onChange={e => setVariants(prev => prev.map((vr, j) => j === i ? { ...vr, stock_quantity: parseInt(e.target.value) || 0 } : vr))} style={{ maxWidth: 100, height: 32, textAlign: 'center', fontWeight: 600 }} />
+                      <span style={{ fontSize: 11, color: v.stock_quantity <= 5 ? 'var(--admin-danger)' : 'var(--admin-text-muted)' }}>
+                        {v.stock_quantity <= 5 ? 'Low Stock' : 'In Stock'}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    {variants.length > 1 && (
+                      <button className="admin-btn-icon" onClick={() => setVariants(variants.filter((_, j) => j !== i))} style={{ color: 'var(--admin-danger)' }}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
       {/* SEO */}

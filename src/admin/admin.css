@@ -495,6 +495,8 @@
 .admin-grid-4 { grid-template-columns: repeat(4, 1fr); }
 .admin-grid-6 { grid-template-columns: repeat(6, 1fr); }
 .admin-flex { display: flex; align-items: center; }
+.admin-text-success { color: var(--admin-success) !important; }
+.admin-text-danger { color: var(--admin-danger) !important; }
 .admin-flex-between { display: flex; align-items: center; justify-content: space-between; }
 .admin-gap-8 { gap: 8px; }
 .admin-gap-12 { gap: 12px; }
