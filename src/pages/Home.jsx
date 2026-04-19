@@ -5,18 +5,13 @@ import ProductCard from '../components/ProductCard';
 import * as api from '../lib/api';
 
 export default function Home() {
-  const [categories, setCategories] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [catRes, prodRes] = await Promise.all([
-        api.getCategories(),
-        api.getNewArrivals(4),
-      ]);
-      setCategories(catRes.data || []);
-      setNewArrivals(prodRes.data || []);
+      const prodRes = await api.getProducts({ sort: 'newest', limit: 30, page: 1 });
+      setProducts(prodRes.data || []);
       setLoading(false);
     }
     load();
@@ -31,8 +26,8 @@ export default function Home() {
           <h1 className="hero-title">Refine Your<br/>Wardrobe</h1>
           <p className="hero-subtitle">Discover the new luxury collection for the modern aesthetic.</p>
           <div className="hero-actions">
-            <Link to="/shop" className="btn btn-primary">Shop Now</Link>
-            <Link to="/shop?category=women" className="btn btn-outline">View Collections</Link>
+            <a href="#all-products" className="btn btn-primary">Shop Now</a>
+            <Link to="/shop" className="btn btn-outline">Browse All</Link>
           </div>
         </div>
       </section>
@@ -53,37 +48,24 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container">
+      <div className="container" id="all-products">
         <section className="section">
-          <h2 style={{ fontSize: '28px', marginBottom: '32px' }}>Shop by Category</h2>
-          <div className="category-scroll">
-            {(loading ? [{name:'',slug:''},{name:'',slug:''},{name:'',slug:''},{name:'',slug:''}] : categories.filter(c=>c.slug!=='sale')).map((cat, i) => (
-              <Link to={`/shop?category=${cat.slug}`} className="category-card" key={cat.slug || i}>
-                {loading ? <div className="skeleton" style={{width:'100%',height:'100%'}}></div> : (
-                  <>
-                    <img src={cat.image_url || `https://picsum.photos/seed/${cat.slug}/400/500`} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div className="category-title">{cat.name}</div>
-                  </>
-                )}
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="section" style={{ paddingTop: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '28px', margin: 0 }}>New Arrivals</h2>
+            <div>
+              <h2 style={{ fontSize: '28px', margin: 0 }}>Our Products</h2>
+              {!loading && <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', margin: '8px 0 0' }}>{products.length} items</p>}
+            </div>
             <Link to="/shop" style={{ textDecoration: 'underline', fontSize: '14px', fontWeight: 500 }}>View All</Link>
           </div>
           <div className="product-grid">
-            {loading ? Array(4).fill(null).map((_, i) => (
+            {loading ? Array(8).fill(null).map((_, i) => (
               <div key={i} className="product-card">
                 <div className="product-image-container skeleton"></div>
                 <div className="skeleton" style={{ height: '12px', width: '40%', marginBottom: '8px' }}></div>
                 <div className="skeleton" style={{ height: '16px', width: '80%', marginBottom: '8px' }}></div>
                 <div className="skeleton" style={{ height: '14px', width: '30%' }}></div>
               </div>
-            )) : newArrivals.map(p => <ProductCard key={p.id} product={p} />)}
+            )) : products.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         </section>
       </div>
