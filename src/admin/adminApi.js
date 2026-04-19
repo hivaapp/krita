@@ -119,19 +119,41 @@ export async function upsertVariants(productId, variants) {
 export async function upsertProductImages(productId, images) {
   await supabase.from('product_images').delete().eq('product_id', productId);
   if (images.length === 0) return { error: null };
-  const rows = images.map((img, i) => ({ product_id: productId, image_url: img.url, display_order: i, is_primary: img.isPrimary || i === 0 }));
+  const rows = images.map((img, i) => ({
+    product_id: productId,
+    image_url: img.url,
+    display_order: i,
+    is_primary: img.isPrimary || i === 0,
+    media_type: img.media_type || 'image',
+  }));
   const { error } = await supabase.from('product_images').insert(rows);
   return { error };
 }
 
-export async function uploadProductImage(productId, file) {
-  const ext = file.name.split('.').pop();
-  const path = `product-images/${productId}/${Date.now()}.${ext}`;
-  const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file);
-  if (uploadError) return { url: null, error: uploadError };
-  const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path);
-  return { url: publicUrl, error: null };
+export async function uploadProductMedia(productId, file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+  const folder = isVideo ? 'videos' : 'images';
+  const path = `products/${productId}/${folder}/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('product-media')
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (uploadError) return { url: null, media_type: null, error: uploadError };
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('product-media')
+    .getPublicUrl(path);
+
+  return { url: publicUrl, media_type: isVideo ? 'video' : 'image', error: null };
 }
+
+// Keep old name as alias for backward compat
+export const uploadProductImage = uploadProductMedia;
 
 // ===== Categories =====
 export async function getCategories() {
@@ -345,7 +367,7 @@ export async function getUnreadNotifCount() {
 }
 
 // ===== Storage / Media =====
-export async function listStorageFiles(bucket = 'product-images', folder = '') {
+export async function listStorageFiles(bucket = 'product-media', folder = '') {
   const { data, error } = await supabase.storage.from(bucket).list(folder, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
   return { data, error };
 }

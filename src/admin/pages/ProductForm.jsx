@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProduct, createProduct, updateProduct, getCategories, upsertVariants, upsertProductImages, uploadProductImage } from '../adminApi';
-import { Save, X, Plus, Trash2, GripVertical, Star, Upload } from 'lucide-react';
+import { getProduct, createProduct, updateProduct, getCategories, upsertVariants, upsertProductImages, uploadProductMedia } from '../adminApi';
+import { Save, X, Plus, Trash2, GripVertical, Star, Upload, Film } from 'lucide-react';
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -17,7 +17,7 @@ export default function ProductForm() {
     price: '', original_price: '', tax_rate: '0', is_active: true, is_new: false, is_sale: false,
     features: [], meta_title: '', meta_description: '', specifications: {},
   });
-  const [images, setImages] = useState([]); // { url, isPrimary, file? }
+  const [images, setImages] = useState([]); // { url, isPrimary, file?, media_type? }
   const [variants, setVariants] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [colors, setColors] = useState([]);
@@ -51,7 +51,7 @@ export default function ProductForm() {
       meta_description: data.meta_description || '', specifications: data.specifications || {},
     });
     setImages((data.product_images || []).sort((a, b) => a.display_order - b.display_order).map(img => ({
-      url: img.image_url, isPrimary: img.is_primary, id: img.id,
+      url: img.image_url, isPrimary: img.is_primary, id: img.id, media_type: img.media_type || 'image',
     })));
     setVariants((data.product_variants || []).map(v => ({
       size: v.size || '', color: v.color || '', color_hex: v.color_hex || '#000',
@@ -107,10 +107,15 @@ export default function ProductForm() {
 
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files);
-    if (images.length + files.length > 8) { alert('Maximum 8 images allowed'); return; }
+    if (images.length + files.length > 8) { alert('Maximum 8 media files allowed'); return; }
     for (const file of files) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
       const tempUrl = URL.createObjectURL(file);
-      setImages(prev => [...prev, { url: tempUrl, isPrimary: prev.length === 0, file }]);
+      setImages(prev => [...prev, {
+        url: tempUrl, isPrimary: !isVideo && prev.length === 0,
+        file, media_type: isVideo ? 'video' : 'image',
+      }]);
     }
   }
 
@@ -157,14 +162,15 @@ export default function ProductForm() {
         productId = data.id;
       }
 
-      // Upload new images
+      // Upload new media (images + videos)
       const finalImages = [];
       for (const img of images) {
         if (img.file) {
-          const { url, error } = await uploadProductImage(productId, img.file);
-          if (url) finalImages.push({ url, isPrimary: img.isPrimary });
+          const { url, media_type, error } = await uploadProductMedia(productId, img.file);
+          if (error) { console.error('Upload error:', error); continue; }
+          if (url) finalImages.push({ url, isPrimary: img.isPrimary, media_type: media_type || 'image' });
         } else {
-          finalImages.push({ url: img.url, isPrimary: img.isPrimary });
+          finalImages.push({ url: img.url, isPrimary: img.isPrimary, media_type: img.media_type || 'image' });
         }
       }
       await upsertProductImages(productId, finalImages);
@@ -291,26 +297,41 @@ export default function ProductForm() {
 
       {/* Images */}
       <div className="admin-card admin-mb-16">
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Images ({images.length}/8)</h3>
-        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" multiple onChange={handleImageUpload} />
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Media ({images.length}/8) — Images & Videos</h3>
+        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime" multiple onChange={handleImageUpload} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
           {images.map((img, i) => (
             <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--admin-radius)', overflow: 'hidden', border: img.isPrimary ? '2px solid var(--admin-accent)' : '1px solid var(--admin-border)' }}>
-              <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {img.media_type === 'video' ? (
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <video src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
+                    <Film size={24} color="#fff" />
+                  </div>
+                </div>
+              ) : (
+                <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
               <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4 }}>
-                <button className="admin-btn-icon" style={{ background: 'white', boxShadow: 'var(--admin-shadow)', width: 24, height: 24 }} onClick={() => setPrimaryImage(i)} title="Set as primary">
-                  <Star size={12} fill={img.isPrimary ? 'var(--admin-accent)' : 'none'} color={img.isPrimary ? 'var(--admin-accent)' : 'var(--admin-text-muted)'} />
-                </button>
+                {img.media_type !== 'video' && (
+                  <button className="admin-btn-icon" style={{ background: 'white', boxShadow: 'var(--admin-shadow)', width: 24, height: 24 }} onClick={() => setPrimaryImage(i)} title="Set as primary">
+                    <Star size={12} fill={img.isPrimary ? 'var(--admin-accent)' : 'none'} color={img.isPrimary ? 'var(--admin-accent)' : 'var(--admin-text-muted)'} />
+                  </button>
+                )}
                 <button className="admin-btn-icon" style={{ background: 'white', boxShadow: 'var(--admin-shadow)', width: 24, height: 24 }} onClick={() => removeImage(i)}>
                   <X size={12} />
                 </button>
               </div>
+              {img.media_type === 'video' && (
+                <div style={{ position: 'absolute', bottom: 4, left: 4, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>VIDEO</div>
+              )}
             </div>
           ))}
           {images.length < 8 && (
             <div onClick={() => fileInputRef.current?.click()} style={{ aspectRatio: '1', border: '2px dashed var(--admin-border)', borderRadius: 'var(--admin-radius)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--admin-text-muted)', fontSize: 12 }}>
               <Upload size={20} style={{ marginBottom: 4 }} />
               Upload
+              <span style={{ fontSize: 10, marginTop: 2 }}>Images & Videos</span>
             </div>
           )}
         </div>
